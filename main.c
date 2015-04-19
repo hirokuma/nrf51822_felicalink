@@ -262,7 +262,7 @@
 
 /** Handle of the current connection. */
 static uint16_t                         m_conn_handle = BLE_CONN_HANDLE_INVALID;
-//FPS   static ble_fps_t                        m_fps;
+static ble_fps_t                        m_fps;
 
 static app_gpiote_user_id_t             m_gpiote_irq;
 
@@ -303,7 +303,7 @@ static void advertising_start(void);
 static void conn_params_evt_handler(ble_conn_params_evt_t * p_evt);
 static void conn_params_error_handler(uint32_t nrf_error);
 
-//FPS   static void svc_fps_handler_ndef(ble_fps_t *p_fps, const uint8_t *p_value, uint16_t length);
+static void svc_fps_handler_ndef(ble_fps_t *p_fps, const uint8_t *p_value, uint16_t length);
 
 static void ble_evt_handler(ble_evt_t * p_ble_evt);
 static void ble_evt_dispatch(ble_evt_t * p_ble_evt);
@@ -348,14 +348,14 @@ int main(void)
 
     // 処理開始
     //timers_start();
-    //advertising_start();
+    advertising_start();
 
     // メインループ
     while (1) {
         //スケジュール済みイベントの実行(mainloop内で呼び出す)
-        //app_sched_execute();
-        //uint32_t err_code = sd_app_evt_wait();
-        //APP_ERROR_CHECK(err_code);
+        app_sched_execute();
+        uint32_t err_code = sd_app_evt_wait();
+        APP_ERROR_CHECK(err_code);
     }
 }
 
@@ -622,7 +622,7 @@ static void advertising_stop(void)
 
 /** @snippet [DFU BLE Reset prepare] */
 #ifdef BLE_DFU_APP_SUPPORT
-static void reset_prepare(void)
+static void dfu_reset_prepare(void)
 {
     uint32_t err_code;
 
@@ -732,12 +732,10 @@ static void conn_params_error_handler(uint32_t nrf_error)
  * @param[in]   p_value 受信バッファ
  * @param[in]   length  受信データ長
  */
-#if 0   //FPS
 static void svc_fps_handler_ndef(ble_fps_t *p_fps, const uint8_t *p_value, uint16_t length)
 {
-    fanta();
+    app_trace_log("svc_fps_handler_ndef\r\n");
 }
-#endif
 
 /**********************************************
  * BLE stack
@@ -762,13 +760,11 @@ static void ble_evt_handler(ble_evt_t *p_ble_evt)
     //接続が成立したとき
     case BLE_GAP_EVT_CONNECTED:
         app_trace_log("BLE_GAP_EVT_CONNECTED\r\n");
+        ST7032I_clear();
+        ST7032I_writeString("connect");
         led_on(LED_PIN_NO_CONNECTED);
         led_off(LED_PIN_NO_ADVERTISING);
         m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-
-        //ボタンの使用を許可する
-        //err_code = app_button_enable();
-        //APP_ERROR_CHECK(err_code);
         break;
 
     //相手から切断されたとき
@@ -776,12 +772,10 @@ static void ble_evt_handler(ble_evt_t *p_ble_evt)
     //保持したSystem Attributeは、EVT_SYS_ATTR_MISSINGで返すことになる。
     case BLE_GAP_EVT_DISCONNECTED:
         app_trace_log("BLE_GAP_EVT_DISCONNECTED\r\n");
+        ST7032I_clear();
+        ST7032I_writeString("disconnect");
         led_off(LED_PIN_NO_CONNECTED);
         m_conn_handle = BLE_CONN_HANDLE_INVALID;
-
-        //ボタンの使用を禁止する
-        //err_code = app_button_disable();
-        //APP_ERROR_CHECK(err_code);
 
         advertising_start();
         break;
@@ -881,7 +875,7 @@ static void ble_evt_dispatch(ble_evt_t *p_ble_evt)
     ble_conn_params_on_ble_evt(p_ble_evt);
 
     //I/O Service
-//FPS    ble_fps_on_ble_evt(&m_fps, p_ble_evt);
+    ble_fps_on_ble_evt(&m_fps, p_ble_evt);
 
 #ifdef BLE_DFU_APP_SUPPORT
     /** @snippet [Propagating BLE Stack events to DFU Service] */
@@ -919,10 +913,9 @@ static void ble_stack_init(void)
     err_code = softdevice_sys_evt_handler_set(sys_evt_dispatch);
     APP_ERROR_CHECK(err_code);
 
-#if 0
 #if defined(S110) || defined(S310)
     /* BLEスタックの有効化 */
-    if (0) {
+    {
         ble_enable_params_t ble_enable_params;
 
         memset(&ble_enable_params, 0, sizeof(ble_enable_params));
@@ -973,15 +966,27 @@ static void ble_stack_init(void)
     }
 
     /////////////////////////////
+    // Service初期化
+    {
+        ble_fps_init_t fps_init;
+
+        fps_init.evt_handler_ndef = svc_fps_handler_ndef;
+        err_code = ble_fps_init(&m_fps, &fps_init);
+        APP_ERROR_CHECK(err_code);
+    }
+
+    /////////////////////////////
     // Advertising初期化
     {
         ble_uuid_t adv_uuids[] = { { FPS_UUID_SERVICE, m_fps.uuid_type } };
-        ble_uuid_t adv_uuids[] = { { FPS_UUID_SERVICE, 0 } };
-        ble_advdata_t advdata = {0};
-        ble_advdata_t scanrsp = {0};
+        ble_advdata_t advdata;
+        ble_advdata_t scanrsp;
         //Vol 3,Part C : Generic Access Profile "9.2 Discovery Modes and Procedures"
         uint8_t flags = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;    //探索時間に制限あり
         //uint8_t flags = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
+
+        memset(&advdata, 0, sizeof(advdata));
+        memset(&scanrsp, 0, sizeof(scanrsp));
 
         /*
          * ble_advdata_name_type_t (ble_advdata.h)
@@ -1040,16 +1045,6 @@ static void ble_stack_init(void)
         APP_ERROR_CHECK(err_code);
     }
 
-    /////////////////////////////
-    // Service初期化
-    {
-        ble_fps_init_t fps_init;
-
-        fps_init.evt_handler_ndef = svc_fps_handler_ndef;
-        err_code = ble_fps_init(&m_fps, &fps_init);
-        APP_ERROR_CHECK(err_code);
-    }
-
 #ifdef BLE_DFU_APP_SUPPORT
     /** @snippet [DFU BLE Service initialization] */
     {
@@ -1066,11 +1061,10 @@ static void ble_stack_init(void)
         err_code = ble_dfu_init(&m_dfus, &dfus_init);
         APP_ERROR_CHECK(err_code);
 
-        dfu_app_reset_prepare_set(reset_prepare);
+        dfu_app_reset_prepare_set(dfu_reset_prepare);
     }
     /** @snippet [DFU BLE Service initialization] */
 #endif // BLE_DFU_APP_SUPPORT
-#endif  //0
 }
 
 
@@ -1081,6 +1075,12 @@ static void ble_stack_init(void)
 bool rcs730cb_read(void *pUser, uint8_t *pData, uint8_t Len)
 {
     app_trace_log("read\r\n");
+
+    if (m_conn_handle == BLE_CONN_HANDLE_INVALID) {
+        return false;
+    }
+
+    ble_fps_notify(&m_fps, pData, Len);
 
     ST7032I_clear();
     ST7032I_writeString("read");
@@ -1100,6 +1100,10 @@ bool rcs730cb_read(void *pUser, uint8_t *pData, uint8_t Len)
 bool rcs730cb_write(void *pUser, uint8_t *pData, uint8_t Len)
 {
     app_trace_log("write\r\n");
+
+    if (m_conn_handle == BLE_CONN_HANDLE_INVALID) {
+        return false;
+    }
 
     ST7032I_clear();
     ST7032I_writeString("write");

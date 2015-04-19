@@ -39,6 +39,8 @@
 
 #include "ble_fps.h"
 
+#include "app_trace.h"
+
 
 /**************************************************************************
  * macro
@@ -115,14 +117,17 @@ void ble_fps_on_ble_evt(ble_fps_t *p_fps, ble_evt_t *p_ble_evt)
 {
     switch (p_ble_evt->header.evt_id) {
     case BLE_GAP_EVT_CONNECTED:
+        app_trace_log("BLE_GAP_EVT_CONNECTED\r\n");
         on_connect(p_fps, p_ble_evt);
         break;
 
     case BLE_GAP_EVT_DISCONNECTED:
+        app_trace_log("BLE_GAP_EVT_DISCONNECTED\r\n");
         on_disconnect(p_fps, p_ble_evt);
         break;
 
     case BLE_GATTS_EVT_WRITE:
+        app_trace_log("BLE_GATTS_EVT_WRITE\r\n");
         on_write(p_fps, p_ble_evt);
         break;
 
@@ -136,7 +141,7 @@ void ble_fps_on_ble_evt(ble_fps_t *p_fps, ble_evt_t *p_ble_evt)
 /**
  * @brief Notification送信
  *
- * BLEの仕様上、ATT_MTU-3(20byte)までしか送信できない。
+ * BLEの仕様上、ATT_MTU-3(nRF51822では20byte)までしか送信できない。
  * それ以上やりとりしたい場合は、Client側にRead Blob Requestしてもらうこと。
  *
  * CCCDのValueにNotificationビットが立っていない場合はNRF_ERROR_INVALID_STATEになる。
@@ -145,18 +150,18 @@ void ble_fps_on_ble_evt(ble_fps_t *p_fps, ble_evt_t *p_ble_evt)
  * @param[in]   p_fps       サービス構造体
  * @retval      NRF_SUCCESS 成功
  */
-uint32_t ble_fps_on_notify(ble_fps_t *p_fps)
+uint32_t ble_fps_notify(ble_fps_t *p_fps, const uint8_t *p_data, uint16_t length)
 {
     ble_gatts_hvx_params_t params;
-    uint8_t     value[1];
-    uint16_t    length = (uint16_t)sizeof(value);
+
+    app_trace_log("ble_fps_notify\r\n");
 
     memset(&params, 0, sizeof(params));
     params.handle = p_fps->char_handle_ndef.value_handle;
     params.type = BLE_GATT_HVX_NOTIFICATION;    //Notification
 //    params.offset = 0;
     params.p_len = &length;
-    params.p_data = value;
+    params.p_data = (uint8_t *)p_data;
 
     return sd_ble_gatts_hvx(p_fps->conn_handle, &params);
 }

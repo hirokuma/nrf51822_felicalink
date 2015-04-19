@@ -110,9 +110,11 @@ void ble_fps_on_ble_evt(ble_fps_t *p_fps, ble_evt_t *p_ble_evt);
 /**@brief Notify送信
  *
  * @param[in]   p_fps       サービス構造体
+ * @param[in]   p_data      データ
+ * @param[in]   length      データ長(21byte以上は20byteにされる)
  * @retval      NRF_SUCCESS 成功
  */
-uint32_t ble_fps_on_notify(ble_fps_t *p_fps);
+uint32_t ble_fps_notify(ble_fps_t *p_fps, const uint8_t *p_data, uint16_t length);
 
 #endif // BLE_FPS_H__
 

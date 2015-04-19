@@ -1,6 +1,6 @@
 PROJECT_NAME := felicaplug
-SDK_PATH = ../../..
-PRJ_PATH = ..
+SDK_PATH = ../..
+PRJ_PATH = .
 BOARD_NAME = BOARD_CUSTOM
 NRF51_TYPE = s110_xxaa
 
@@ -67,7 +67,7 @@ C_SOURCE_FILES += $(SDK_PATH)/components/drivers_nrf/uart/app_uart_fifo.c
 C_SOURCE_FILES += $(SDK_PATH)/components/libraries/uart/retarget.c
 
 #sources project
-#C_SOURCE_FILES += $(PRJ_PATH)/services/ble_fps.c
+C_SOURCE_FILES += $(PRJ_PATH)/services/ble_fps.c
 C_SOURCE_FILES += $(PRJ_PATH)/felica/rcs730.c
 C_SOURCE_FILES += $(PRJ_PATH)/st7032i/st7032i.c
 C_SOURCE_FILES += $(PRJ_PATH)/main.c
