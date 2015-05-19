@@ -46,8 +46,10 @@
 //8F82xxxx-7326-78CF-E5B0-F514E62BC594
 //                                                                                  xxxxxxxxx
 #define FPS_UUID_BASE { 0x94,0xC5,0x2B,0xE6,0x14,0xF5,0xB0,0xE5,0xCF,0x78,0x26,0x73,0x00,0x00,0x82,0x8F }
-#define FPS_UUID_SERVICE        (0x0001)
-#define FPS_UUID_CHAR_NDEF      (0x0011)
+#define FPS_UUID_SERVICE        (0x5500)
+#define FPS_UUID_CHAR_NDEF      (0x5501)
+#define FPS_UUID_CHAR_READ      (0x5502)
+#define FPS_UUID_CHAR_WRITE     (0x5503)
 
 
 /**************************************************************************
