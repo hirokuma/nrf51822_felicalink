@@ -11,7 +11,7 @@
 
 
 #define I2C_SLV_ADDR    (0x80)      //Default Slave Address(8bit)
-#define RETRY_NUM       (5)         //max I2C Retry count
+#define RETRY_NUM       (10)         //max I2C Retry count
 
 
 static uint8_t                  _slvAddr;
@@ -55,7 +55,7 @@ void RCS730_init(void)
 }
 
 
-void RCS730_setCallbackTable(const RCS730_callbacktable_t *pInitTable)
+__INLINE void RCS730_setCallbackTable(const RCS730_callbacktable_t *pInitTable)
 {
     _cbTable = *pInitTable;
 }
@@ -104,7 +104,7 @@ int RCS730_pageWrite(uint16_t MemAddr, const uint8_t *pData, uint8_t Length)
 
 
 #if 0
-int RCS730_randomRead(uint16_t MemAddr, uint8_t *pData)
+__INLINE int RCS730_randomRead(uint16_t MemAddr, uint8_t *pData)
 {
     return RCS730_sequentialRead(MemAddr, pData, 1);
 }
@@ -150,13 +150,13 @@ int RCS730_currentAddrRead(uint8_t *pData)
 #endif
 
 
-int RCS730_readRegister(uint16_t Reg, uint32_t* pData)
+__INLINE int RCS730_readRegister(uint16_t Reg, uint32_t* pData)
 {
     return RCS730_sequentialRead(Reg, (uint8_t*)pData, sizeof(uint32_t));
 }
 
 
-int RCS730_writeRegisterForce(uint16_t Reg, uint32_t Data)
+__INLINE int RCS730_writeRegisterForce(uint16_t Reg, uint32_t Data)
 {
     return RCS730_pageWrite(Reg, (const uint8_t*)&Data, sizeof(Data));
 }
@@ -180,7 +180,7 @@ int RCS730_writeRegister(uint16_t Reg, uint32_t Data, uint32_t Mask)
 }
 
 
-int RCS730_setRegOpMode(RCS730_OpMode Mode)
+__INLINE int RCS730_setRegOpMode(RCS730_OpMode Mode)
 {
     return RCS730_writeRegister(RCS730_REG_OPMODE, (uint32_t)Mode, RCS730_REG_MASK_VAL);
 }
@@ -200,19 +200,19 @@ int RCS730_setRegSlaveAddr(int SAddr)
 }
 
 
-int RCS730_setRegInterruptMask(uint32_t Mask, uint32_t Value)
+__INLINE int RCS730_setRegInterruptMask(uint32_t Mask, uint32_t Value)
 {
     return RCS730_writeRegister(RCS730_REG_INT_MASK, Value, Mask);
 }
 
 
-int RCS730_setRegPlugSysCode(RCS730_PlugSysCode SysCode)
+__INLINE int RCS730_setRegPlugSysCode(RCS730_PlugSysCode SysCode)
 {
     return RCS730_writeRegister(RCS730_REG_PLUG_CONF1, (uint32_t)SysCode, 0x00000002);
 }
 
 
-int RCS730_goToInitializeStatus(void)
+__INLINE int RCS730_goToInitializeStatus(void)
 {
     return RCS730_writeRegisterForce(RCS730_REG_INIT_CTRL, 0x0000004a);
 }

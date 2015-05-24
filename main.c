@@ -114,7 +114,8 @@
  * デバイス名
  *   UTF-8かつ、\0を含まずに20文字以内(20byte?)
  */
-#define GAP_DEVICE_NAME                 "FelicaPlugDev"
+#define GAP_DEVICE_NAME                 "FelicaLinkDev"
+//                                      "12345678901234567890"
 
 /*
  * Appearance設定
@@ -123,7 +124,7 @@
  * Bluetooth Core Specification Supplement, Part A, Section 1.12
  * Bluetooth Core Specification 4.0 (Vol. 3), Part C, Section 12.2
  * https://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.gap.appearance.xml
- * https://devzone.nordicsemi.com/documentation/nrf51/4.3.0/html/group___b_l_e___a_p_p_e_a_r_a_n_c_e_s.html
+ * https://developer.nordicsemi.com/nRF51_SDK/nRF51_SDK_v7.x.x/doc/7.2.0/s110/html/a00837.html
  */
 
 /*
@@ -313,6 +314,7 @@ static void ble_stack_init(void);
 bool rcs730cb_read(void *pUser, uint8_t *pData, uint8_t Len);
 bool rcs730cb_write(void *pUser, uint8_t *pData, uint8_t Len);
 
+
 /**************************************************************************
  * main entry
  **************************************************************************/
@@ -321,6 +323,9 @@ bool rcs730cb_write(void *pUser, uint8_t *pData, uint8_t Len);
  */
 int main(void)
 {
+    uint32_t err_code;
+    int ret;
+
     // 初期化
     gpio_init();
     twi_master_init();
@@ -331,15 +336,17 @@ int main(void)
 //    buttons_init();
     scheduler_init();
 
-    ST7032I_init();
-    ST7032I_writeString("(^_^)");
-
     RCS730_init();
     m_rcs730_cbtbl.pUserData = NULL;
     m_rcs730_cbtbl.pCbRxHTRDone = rcs730cb_read;
     m_rcs730_cbtbl.pCbRxHTWDone = rcs730cb_write;
     RCS730_setCallbackTable(&m_rcs730_cbtbl);
-    RCS730_initFTMode(RCS730_OPMODE_PLUG);
+    ret = RCS730_initFTMode(RCS730_OPMODE_PLUG);
+    if (ret != 0) {
+        APP_ERROR_HANDLER(ret);
+    }
+
+    ST7032I_init();
 
     ble_stack_init();
 
@@ -350,11 +357,13 @@ int main(void)
     //timers_start();
     advertising_start();
 
+    ST7032I_writeString("(^_^);");
+
     // メインループ
     while (1) {
         //スケジュール済みイベントの実行(mainloop内で呼び出す)
         app_sched_execute();
-        uint32_t err_code = sd_app_evt_wait();
+        err_code = sd_app_evt_wait();
         APP_ERROR_CHECK(err_code);
     }
 }
@@ -547,7 +556,7 @@ static void scheduler_init(void)
  **********************************************/
 
 /**
- * @brief RFDET検知
+ * @brief IRQ検知
  */
 static void gpiote_irq_handler(uint32_t event_pins_low_to_high, uint32_t event_pins_high_to_low)
 {
@@ -565,7 +574,7 @@ static void gpiote_init(void)
 
     APP_GPIOTE_INIT(APP_GPIOTE_MAX_USERS);
 
-    //RFDET : active low
+    //IRQ : active low
     err_code = app_gpiote_user_register(&m_gpiote_irq,
                         0,
                         1 << RCS730_IRQ,
@@ -626,16 +635,14 @@ static void dfu_reset_prepare(void)
 {
     uint32_t err_code;
 
-    if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-    {
+    if (m_conn_handle != BLE_CONN_HANDLE_INVALID) {
         // Disconnect from peer.
         err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
         APP_ERROR_CHECK(err_code);
         err_code = bsp_indication_set(BSP_INDICATE_IDLE);
         APP_ERROR_CHECK(err_code);
     }
-    else
-    {
+    else {
         // If not connected, then the device will be advertising. Hence stop the advertising.
         advertising_stop();
     }
@@ -750,7 +757,7 @@ static void ble_evt_handler(ble_evt_t *p_ble_evt)
 {
     uint32_t                         err_code;
     static ble_gap_evt_auth_status_t m_auth_status;
-    ble_gap_enc_info_t *             p_enc_info;
+    ble_gap_enc_info_t               *p_enc_info;
 
     switch (p_ble_evt->header.evt_id) {
     /*************
@@ -906,8 +913,9 @@ static void ble_stack_init(void)
 
     /*
      * SoftDeviceの初期化
+     *      スケジューラの使用：あり
      */
-    SOFTDEVICE_HANDLER_INIT(NRF_CLOCK_LFCLKSRC_RC_250_PPM_4000MS_CALIBRATION, false);
+    SOFTDEVICE_HANDLER_INIT(NRF_CLOCK_LFCLKSRC_RC_250_PPM_4000MS_CALIBRATION, true);
 
     /* システムイベントハンドラの設定 */
     err_code = softdevice_sys_evt_handler_set(sys_evt_dispatch);
@@ -965,8 +973,9 @@ static void ble_stack_init(void)
         APP_ERROR_CHECK(err_code);
     }
 
-    /////////////////////////////
-    // Service初期化
+    /*
+     * Service初期化
+     */
     {
         ble_fps_init_t fps_init;
 
@@ -975,8 +984,9 @@ static void ble_stack_init(void)
         APP_ERROR_CHECK(err_code);
     }
 
-    /////////////////////////////
-    // Advertising初期化
+    /*
+     * Advertising初期化
+     */
     {
         ble_uuid_t adv_uuids[] = { { FPS_UUID_SERVICE, m_fps.uuid_type } };
         ble_advdata_t advdata;
@@ -996,6 +1006,7 @@ static void ble_stack_init(void)
          * BLE_ADVDATA_FULL_NAME  : デバイス名あり «Complete Local Name»
          *
          * https://www.bluetooth.org/en-us/specification/assigned-numbers/generic-access-profile
+         * https://developer.nordicsemi.com/nRF51_SDK/nRF51_SDK_v7.x.x/doc/7.2.0/s110/html/a01015.html#ga03c5ccf232779001be9786021b1a563b
          */
         advdata.name_type = BLE_ADVDATA_FULL_NAME;
 
@@ -1010,7 +1021,7 @@ static void ble_stack_init(void)
         /*
          * Advertisingフラグの設定
          * CSS_v4 : Part A  1.3 FLAGS
-         * https://devzone.nordicsemi.com/documentation/nrf51/4.3.0/html/group___b_l_e___g_a_p___a_d_v___f_l_a_g_s.html
+         * https://developer.nordicsemi.com/nRF51_SDK/nRF51_SDK_v7.x.x/doc/7.2.0/s110/html/a00802.html
          *
          * BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE = BLE_GAP_ADV_FLAG_LE_LIMITED_DISC_MODE | BLE_GAP_ADV_FLAG_BR_EDR_NOT_SUPPORTED
          *      BLE_GAP_ADV_FLAG_LE_LIMITED_DISC_MODE : LE Limited Discoverable Mode
@@ -1027,8 +1038,9 @@ static void ble_stack_init(void)
         APP_ERROR_CHECK(err_code);
     }
 
-    /////////////////////////////
-    // Connection初期化
+    /*
+     * Connection初期化
+     */
     {
         ble_conn_params_init_t cp_init = {0};
 
@@ -1075,15 +1087,20 @@ static void ble_stack_init(void)
 bool rcs730cb_read(void *pUser, uint8_t *pData, uint8_t Len)
 {
     app_trace_log("read\r\n");
+    ST7032I_clear();
 
     if (m_conn_handle == BLE_CONN_HANDLE_INVALID) {
-        return false;
+        ST7032I_writeString("read err");
+
+        pData[0] = 13;
+        pData[10] = 0xff;  //ST1
+        pData[11] = 0x70;  //ST2(データ読み出しエラー)
+        return true;
     }
 
-    ble_fps_notify(&m_fps, pData, Len);
-
-    ST7032I_clear();
     ST7032I_writeString("read");
+
+    ble_fps_notify(&m_fps, pData, Len);
 
     uint8_t nob = pData[13] << 4;       //16byte * NoB
     pData[0] = (uint8_t)(13 + nob);
@@ -1100,16 +1117,21 @@ bool rcs730cb_read(void *pUser, uint8_t *pData, uint8_t Len)
 bool rcs730cb_write(void *pUser, uint8_t *pData, uint8_t Len)
 {
     app_trace_log("write\r\n");
+    ST7032I_clear();
+
+    pData[0] = 12;
 
     if (m_conn_handle == BLE_CONN_HANDLE_INVALID) {
-        return false;
+        ST7032I_writeString("write err");
+
+        pData[10] = 0xff;  //ST1
+        pData[11] = 0x70;  //ST2
+        return true;
     }
 
-    ST7032I_clear();
     ST7032I_writeString("write");
 
     pData[16 + 16] = '\0';
-    pData[0] = 12;
     pData[10] = 0;  //ST1
     pData[11] = 0;  //ST2
 

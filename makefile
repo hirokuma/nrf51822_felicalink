@@ -166,7 +166,7 @@ vpath %.s $(ASM_PATHS)
 OBJECTS = $(C_OBJECTS) $(ASM_OBJECTS)
 
 #debug: CFLAGS += -DDEBUG
-debug: CFLAGS += -DENABLE_DEBUG_LOG_SUPPORT
+#debug: CFLAGS += -DENABLE_DEBUG_LOG_SUPPORT
 debug: CFLAGS += -ggdb3 -O0
 debug: ASMFLAGS += -DDEBUG -ggdb3 -O0
 debug: LDFLAGS += -ggdb3 -O0
