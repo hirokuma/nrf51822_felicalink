@@ -117,9 +117,9 @@ int RCS730_sequentialRead(uint16_t MemAddr, uint8_t *pData, uint8_t Length)
     int retry = RETRY_NUM;
     uint8_t buf[256];
 
-    if (Length > 255) {
-        return NRF_ERROR_INVALID_PARAM;
-    }
+//    if (Length > 255) {
+//        return NRF_ERROR_INVALID_PARAM;
+//    }
 
     buf[0] = (char)(MemAddr >> 8);
     buf[1] = (char)(MemAddr & 0xff);

@@ -70,6 +70,7 @@ C_SOURCE_FILES += $(SDK_PATH)/components/libraries/uart/retarget.c
 C_SOURCE_FILES += $(PRJ_PATH)/services/ble_fps.c
 C_SOURCE_FILES += $(PRJ_PATH)/felica/rcs730.c
 C_SOURCE_FILES += $(PRJ_PATH)/st7032i/st7032i.c
+C_SOURCE_FILES += $(PRJ_PATH)/dev.c
 C_SOURCE_FILES += $(PRJ_PATH)/main.c
 
 #assembly files common to all targets
@@ -116,7 +117,8 @@ CFLAGS += -DSOFTDEVICE_PRESENT
 #CFLAGS += -D$(BOARD_NAME)
 CFLAGS += -mcpu=cortex-m0
 CFLAGS += -mthumb -mabi=aapcs --std=gnu99
-CFLAGS += -Wall -Werror
+CFLAGS += -W -Wall #-Werror
+CFLAGS += -Wno-unused-parameter
 CFLAGS += -mfloat-abi=soft
 # keep every function in separate section. This will allow linker to dump unused functions
 CFLAGS += -ffunction-sections -fdata-sections -fno-strict-aliasing
