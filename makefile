@@ -1,4 +1,4 @@
-PROJECT_NAME := felicaplug
+PROJECT_NAME := felicalink
 SDK_PATH = ../..
 PRJ_PATH = .
 BOARD_NAME = BOARD_CUSTOM
@@ -117,12 +117,13 @@ CFLAGS += -DSOFTDEVICE_PRESENT
 #CFLAGS += -D$(BOARD_NAME)
 CFLAGS += -mcpu=cortex-m0
 CFLAGS += -mthumb -mabi=aapcs --std=gnu99
-CFLAGS += -W -Wall #-Werror
-CFLAGS += -Wno-unused-parameter
 CFLAGS += -mfloat-abi=soft
 # keep every function in separate section. This will allow linker to dump unused functions
 CFLAGS += -ffunction-sections -fdata-sections -fno-strict-aliasing
 CFLAGS += -flto -fno-builtin
+#warning/error
+CFLAGS += -W -Wall #-Werror
+CFLAGS += -Wno-unused-parameter -Wno-old-style-declaration
 
 # keep every function in separate section. This will allow linker to dump unused functions
 LDFLAGS += -Xlinker -Map=$(LISTING_DIRECTORY)/$(OUTPUT_FILENAME).map
@@ -140,6 +141,8 @@ ASMFLAGS += -DBLE_STACK_SUPPORT_REQD
 ASMFLAGS += -DS110
 ASMFLAGS += -DSOFTDEVICE_PRESENT
 #ASMFLAGS += -D$(BOARD_NAME)
+
+
 #default target - first one defined
 default: debug
 
@@ -176,7 +179,6 @@ debug: OUTPUT_FILENAME := nrf51822_qfaa_s110d
 debug: LINKER_SCRIPT=$(SDK_PATH)/components/toolchain/gcc/gcc_nrf51_$(NRF51_TYPE).ld
 debug: $(BUILD_DIRECTORIES) $(OBJECTS)
 	@echo [DEBUG]Linking target: $(OUTPUT_FILENAME).out
-	@echo [DEBUG]CFLAGS=$(CFLAGS)
 	$(NO_ECHO)$(CC) $(LDFLAGS) $(OBJECTS) $(LIBS) -o $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).out
 	$(NO_ECHO)$(MAKE) -f $(MAKEFILE_NAME) -C $(MAKEFILE_DIR) -e finalize
 
@@ -192,7 +194,8 @@ release: clean $(BUILD_DIRECTORIES) $(OBJECTS)
 
 ## Create build directories
 $(BUILD_DIRECTORIES):
-	echo [makefile]$(MAKEFILE_NAME)
+	@echo [makefile]$(MAKEFILE_NAME)
+	@echo CFLAGS=$(CFLAGS)
 	$(MK) $@
 
 # Create objects from C SRC files
