@@ -66,6 +66,14 @@
 
 
 /*
+ * デバイス名
+ *   UTF-8かつ、\0を含まずに20文字以内(20byte?)
+ */
+#define GAP_DEVICE_NAME                 "FelicaLinkDev"
+//                                      "12345678901234567890"
+
+
+/*
  * Timer
  */
 /** Value of the RTC1 PRESCALER register. */
@@ -107,13 +115,6 @@
 
 /** Maximum number of events in the scheduler queue. */
 #define SCHED_QUEUE_SIZE                (10)
-
-/*
- * デバイス名
- *   UTF-8かつ、\0を含まずに20文字以内(20byte?)
- */
-#define GAP_DEVICE_NAME                 "FelicaLinkDev"
-//                                      "12345678901234567890"
 
 /*
  * Appearance設定
